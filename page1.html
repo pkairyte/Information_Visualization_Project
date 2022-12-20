@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <tittle>Student Scores</tittle>
+        <link rel="stylesheet" href="styles.css">
+        <script src="https://d3js.org/d3.v6.min.js"></script>
+        <script src="https://d3js.org/d3-path.v2.min.js"></script>
+        <script src="https://d3js.org/d3-shape.v2.min.js"></script>
+        <script crossingin src="https://unpkg.com/react/umd/react.development.js"></script>
+        <script crossingin src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+        <script crossingin src="https://unpkg.com/babel-standalone/babel.js"></script>
+    </head>
+    <body>
+        <h1>Student Exam Scores</h1>
+        <div id="root"></div>
+        <script type='text/babel'>
+            const margin = { top: 20, right: 20, bottom: 180, left: 40, gap: 50 };
+            const csvUrl = 'https://gist.githubusercontent.com/kapetanenver/cdfcca623bddd41213cab6ee19a1e482/raw/e36c56eb2ddcfa22aa0210a48b722ac7c667543b/student_scores_data'
+            function useData(csvPath){
+                const [dataAll, setData] = React.useState(null);
+                var count = 0;
+                React.useEffect(() => {
+                    d3.csv(csvPath).then(data => {
+                        data.forEach(d => {
+                            d.number =count;
+                            count +=1;
+                            d.gender = d.gender;
+                            d.race_ethnicity = d.race_ethnicity;
+                            d.parental_level_of_education = d.parental_level_of_education;
+                            d.lunch = d.lunch;
+                            d.test_preparation_course = d.test_preparation_course;
+                            d.math_score = +d.math_score;
+                            d.reading_score = +d.reading_score;
+                            d.writing_score = +d.writing_score;
+                            d.average =+ Number((d.math_score + d.writing_score +d.reading_score)/3).toFixed(2);
+                        });
+                        setData(data);
+                    });
+                }, []);
+                return dataAll;
+            }
+
+            function Sorter(props){
+                const {data1, y_var} = props;
+                // console.log(y_var)
+                if (y_var==='d.average'){
+                    data5 = data1.sort(function (a,b) {return d3.ascending(a.average , b.average);});
+                    // console.log(data5);
+                }else if (y_var === 'd.math_score'){
+                    data5 = data.sort(function (a,b) {return d3.ascending(a.math_score , b.math_score);});
+                }else if (y_var === 'd.reading_score'){
+                    data5 = data.sort(function (a,b) {return d3.ascending(a.reading_score , b.reading_score);});
+                }else if (y_var==='d.writing_score'){
+                    data5 = data.sort(function (a,b) {return d3.ascending(a.writing_score , b.writing_score);});
+                };
+                return data5;
+            }
+
+            function Tooltip(props){
+                const{data, selectedNumber, selectedX, selectedY, selectedData} = props;
+                const styles2 = {
+                    left: selectedX,
+                    top: selectedY,
+                    position: 'absolute',
+                    textAlign: 'center',
+                    width: '200px',
+                    height: '100px',
+                    padding: '2px',
+                    font: '10px sans-serif',
+                    background: 'rgb(57,206,57)',
+                    border: '1px',
+                    borderRadius: '8px',
+                    pointerEvents: 'none',
+                };
+
+                if (selectedNumber === null){
+                    return <div></div>
+                }else{
+                    return (<div style={styles2}>
+                        <text> Student Number:{selectedData.number} </text>
+                        <br/>
+                        <text> Student Average Exam Score: {selectedData.average} </text>
+                        <br/>
+                        <text> Student Math Score: {selectedData.math_score} </text>
+                        <br/>
+                        <text> Student Reading Score: {selectedData.reading_score} </text>
+                        <br/>
+                        <text> Student Writing Score: {selectedData.writing_score} </text>
+                        <br/>
+                        <text> Parent Level of Education: {selectedData.parental_level_of_education}</text>
+                        <br/>
+                        <text> Race: {selectedData.race_ethnicity} </text>
+
+                        </div>)
+                }
+            }
+
+            function BarChart(props){
+                const {data, height, width, y_var, x, y, label, selectedNumber, mouseOver, mouseOut} = props;
+                const color = d => d.number === selectedNumber ? 'red':'steelblue';
+                if (y_var==='d.average'){
+                    var data_sorted = data.sort(function (a,b) {return d3.ascending(a.average , b.average);});
+                    // console.log(data_sorted);
+                }else if (y_var === 'd.math_score'){
+                    var data_sorted = data.sort(function (a,b) {return d3.ascending(a.math_score , b.math_score);});
+                }else if (y_var === 'd.reading_score'){
+                    var data_sorted = data.sort(function (a,b) {return d3.ascending(a.reading_score , b.reading_score);});
+                }else if (y_var==='d.writing_score'){
+                    var data_sorted = data.sort(function (a,b) {return d3.ascending(a.writing_score , b.writing_score);});
+                };
+                const xScale = d3.scaleBand()
+                    .range([0,width])
+                    .domain(data_sorted.map(d => {return d.number}));
+                const yScale = d3.scaleLinear()
+                    .range([height, 0])
+                    .domain([0,100]).nice(); 
+                const domain = xScale.domain();
+                const ticks = yScale.ticks();   
+                if (selectedNumber === null){
+                    return <g transform={`translate(${x}, ${y})`}>
+                        <text style={{ textAnchor:'start', fontSize:'15px'}} transform={`translate(${width/4}, -5)`}>
+                            {label}
+                        </text>
+            
+                        <line x1={0} y1={height} x2={width} y2={height} stroke={'black'} />
+                        {domain.map( tickValue => {
+                            return <g key={tickValue} transform={`translate(${xScale(tickValue)}, ${height})rotate(70)`}>
+                                </g>
+                            })}
+                        <line y2={height} stroke={'black'} />
+                        {ticks.map( tickValue =>{
+                                return <g key={tickValue} transform={`translate(-10, ${yScale(tickValue)})`}>
+                                        <line x2={10} stroke={'black'} />
+                                        <text style={{ textAnchor:'end', fontSize:'10px'}}>
+                                        {tickValue}
+                                        </text>
+                                    </g>
+                            })}
+                        {data_sorted.map(d => {
+                            return <rect key={d.number} x={xScale(d.number)} y={ eval('yScale('+ y_var +')')}
+                            width={xScale.bandwidth()} fill={'steelblue'} stroke={'black'} height={(height - eval('yScale('+ y_var +')'))}
+                            onMouseOver={()=> mouseOver(d)} onMouseOut={mouseOut}/>
+                            })} 
+                    </g>   
+                }else{
+                    return <g transform={`translate(${x}, ${y})`}>
+                        <text style={{ textAnchor:'start', fontSize:'15px'}} transform={`translate(${width/4}, -5)`}>
+                            {label}
+                        </text>
+            
+                        <line x1={0} y1={height} x2={width} y2={height} stroke={'black'} />
+                        {domain.map( tickValue => {
+                            return <g key={tickValue} transform={`translate(${xScale(tickValue)}, ${height})rotate(70)`}>
+                                </g>
+                            })}
+                        <line y2={height} stroke={'black'} />
+                        {ticks.map( tickValue =>{
+                                return <g key={tickValue} transform={`translate(-10, ${yScale(tickValue)})`}>
+                                        <line x2={10} stroke={'black'} />
+                                        <text style={{ textAnchor:'end', fontSize:'10px'}}>
+                                        {tickValue}
+                                        </text>
+                                    </g>
+                            })}
+                        {data_sorted.map(d => {
+                            return <rect key={d.number} x={xScale(d.number)} y={ eval('yScale('+ y_var +')')}
+                            width={xScale.bandwidth()} fill={color(d)} stroke={'black'} height={(height - eval('yScale('+ y_var +')'))}
+                            onMouseOver={()=> mouseOver(d)} onMouseOut={mouseOut}/>
+                            })} 
+                        {data_sorted.filter( d => d.number === selectedNumber).map(d=> {
+                            return <rect key={d.number} x={xScale(d.number)} y={eval('yScale('+ y_var +')')}
+                            width={xScale.bandwidth()} fill={color(d)} stroke={'black'} height={(height - eval('yScale('+ y_var +')'))}
+                            onMouseOver={()=> mouseOver(d)} onMouseOut={mouseOut}/>
+                            })} 
+                        </g>    
+                } 
+            }
+
+            const Heatmap = ({ data, height, width, score, x, y, label }) => {
+                const ethnicities = [...new Set(data.map(x => x.race_ethnicity).sort())];
+                const scoreRanges = ['1-10', '11-20', '21-30', '31-40', '41-50', '51-60', '61-70', '71-80', '81-90', '91-100'];
+                const ethnicityAmounts = ethnicities.map(eth => {
+                    let studentAmounts = [];
+                    for (let i = 1; i < 100; i += 10) {
+                        studentAmounts.push(data.filter(x => i < x[score] && x[score] < i + 9 && x.race_ethnicity === eth).length);
+                    }
+                    return {
+                        'ethnicity': eth,
+                        'amounts': studentAmounts
+                    };
+                });
+
+                const bandWidth = d3.scaleBand()
+                    .range([0, width])
+                    .domain(scoreRanges)
+                    .bandwidth();
+
+                const bandHeight = d3.scaleBand()
+                    .range([height, 0])
+                    .domain(ethnicities)
+                    .bandwidth();
+                
+                const minStudents = Math.min(
+                    ...ethnicityAmounts.map(x => Math.min(...x.amounts))
+                );
+                const maxStudents = Math.max(
+                    ...ethnicityAmounts.map(x => Math.max(...x.amounts))
+                );
+
+                const rectColor = d3.scaleLinear()
+                    .range(['white', '#69b3a2'])
+                    .domain([minStudents, maxStudents]);
+
+                return (
+                    <g transform={`translate(${x}, ${y})`}>
+                        <text
+                            style={{ textAnchor: 'start', fontSize: '15px' }}
+                            transform={`translate(${width / 4}, -5)`}>
+                            {label}
+                        </text>
+
+                        <defs>
+                            <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style={{ stopColor: '#69b3a2', stopOpacity: 1 }} />
+                                <stop offset="100%" style={{ stopColor: 'white', stopOpacity: 1 }} />
+                            </linearGradient>
+                        </defs>
+
+                        <rect
+                            x={width + 10}
+                            y={20}
+                            width={20}
+                            height={100}
+                            fill="url(#grad)" />
+                        <text
+                            style={{ textAnchor: 'start', fontSize: '15px' }}
+                            transform={`translate(${width + 35}, ${25})`}>
+                            {maxStudents}
+                        </text>
+                        <text
+                            style={{ textAnchor: 'start', fontSize: '15px' }}
+                            transform={`translate(${width + 35}, ${125})`}>
+                            {minStudents}
+                        </text>
+
+                        <line x1={0} y1={height} x2={width} y2={height} stroke={'black'} />
+                        <line y2={height} stroke={'black'} />
+
+                        {ethnicities.map((e, i) => (
+                            <g
+                                key={i}
+                                transform={`translate(-10, ${i * bandHeight + bandHeight / 2})`}>
+                                <line x2={10} stroke={'black'} />
+                                <text style={{ textAnchor:'end', fontSize: '10px' }}>
+                                    {e}
+                                </text>
+                            </g>
+                        ))}
+
+                        {scoreRanges.map((r, i) => (
+                            <g
+                                key={i}
+                                transform={`translate(${i * bandWidth + bandWidth / 2}, ${height + 20})`}>
+                                <line y1={-10} y2={-20} stroke={'black'} />
+                                <text style={{ textAnchor: 'middle', fontSize: '10px' }}>
+                                    {r}
+                                </text>
+                            </g>
+                        ))}
+
+                        {ethnicityAmounts.map((eth, i) => (
+                            eth.amounts.map((x, j) => (
+                                <rect
+                                    key={`${i}${j}`}
+                                    x={j * bandWidth}
+                                    y={i * bandHeight}
+                                    width={bandWidth}
+                                    height={bandHeight}
+                                    fill={rectColor(x)} />
+                            )) 
+                        ))}
+                    </g>
+                );
+            };
+
+            const Charts = () => {
+                const dataAll = useData(csvUrl);
+                const [sex, setSex] = React.useState('male');
+                const [lunch, setLunch] = React.useState('standard');
+                const [test, setTest] = React.useState('none');
+                const [selectedNumber, setSelectedNumber] = React.useState(null);
+                const [selectedX, setSelectedX] = React.useState(null);
+                const [selectedY, setSelectedY] = React.useState(null);
+                const [selectedData, setSelectedData] = React.useState(null)
+                const mouseOver = d => {
+                    setSelectedNumber(d.number);
+                    setSelectedX(event.pageX + 'px');
+                    setSelectedY(event.pageY + 'px');
+                    setSelectedData(d)
+                };
+                
+                const mouseOut = () => {
+                    setSelectedNumber(null);
+                    setSelectedX(null);
+                    setSelectedY(null);
+                    setSelectedData(null)
+                };
+                if (!dataAll) {
+                   return <pre>Loading...</pre>;
+
+                };
+                // console.log(selectedNumber);
+                const WIDTH = 1600;
+                const HEIGHT = 1400;
+                const innerheight = HEIGHT - margin.top - margin.bottom;
+                const innerwidth = WIDTH - margin.left - margin.right; 
+
+                const changeHandler= (event) => {
+                    setSex(event.target.value);
+                };
+
+                const changeHandler2 = (event) => {
+                    setLunch(event.target.value);
+                };
+
+                const changeHandler3 = (event) => {
+                    setTest(event.target.value);
+                };
+
+                const data1 = dataAll.filter( d=> {
+                    return d.gender == sex;
+                    }); 
+
+                const data2 = data1.filter( d=> {
+                    return d.lunch == lunch;
+                    }); 
+
+                const data = data2.filter( d=> {
+                    return d.test_preparation_course == test;
+                    });     
+
+                
+
+
+                return (
+                    <div class="grid-container">
+
+                        <div id="grid-radio1" className="radio" onChange={changeHandler}>
+                            <input type="radio" value="male" name="gender" defaultChecked='True'/>
+                                Male
+                            <input type="radio" value="female" name='gender'/>
+                                Female
+                        </div>  
+                        <div id="grid-radio2" className='radio' onChange={changeHandler2}>
+                            <input type='radio' value='standard' name='lunch' defaultChecked='True'/>
+                                Standard Lunch
+                            <input type='radio' value='free/reduced' name='lunch'/>
+                                Free/reduced Lunch  
+                        </div>    
+                        <div id="grid-radio3" className="radio" onChange={changeHandler3}>
+                            <input type="radio" value="none" name='test_prep' defaultChecked='True'/>
+                                No test prep
+                            <input type="radio" value="completed" name="test_prep" />
+                                Completed Test prep    
+                        </div>
+
+                        <div class="grid-charts">
+                        <svg height="100%" width="100%">
+                            <g>
+                            <BarChart data={data} height={innerheight/4} width={innerwidth/4} y_var='d.average' x={margin.left} y={margin.top} label='Student Average Scores' selectedNumber={selectedNumber} mouseOver = {mouseOver} mouseOut={mouseOut}/>
+                            <BarChart data={data} height={innerheight/4} width={innerwidth/4} y_var='d.math_score' x={margin.left} y={innerheight/4 + margin.gap} label='Student Math Scores' selectedNumber={selectedNumber} mouseOver = {mouseOver} mouseOut={mouseOut}/>
+                            <BarChart data={data} height={innerheight/4} width={innerwidth/4} y_var='d.reading_score' x={margin.left+ innerwidth/4 +margin.gap} y={margin.top} label='Student Reading Scores' selectedNumber={selectedNumber} mouseOver = {mouseOver} mouseOut={mouseOut}/>
+                            <BarChart data={data} height={innerheight/4} width={innerwidth/4} y_var='d.writing_score' x={margin.left+ innerwidth/4 +margin.gap} y={innerheight/4 + margin.gap} label='Student Writing Scores' selectedNumber={selectedNumber} mouseOver = {mouseOver} mouseOut={mouseOut}/>
+                            </g>    
+                        </svg>
+                        <Tooltip data={data} selectedNumber={selectedNumber} selectedX={selectedX} selectedY={selectedY} selectedData={selectedData}/>
+                    </div>
+                    <div class="grid-heatmap">
+                        <svg height="100%" width="100%">
+                            <g>
+                            <Heatmap
+                                data={data}
+                                score="average"
+                                height={innerheight / 4}
+                                width={innerwidth / 4}
+                                x={margin.left}
+                                y={margin.top}
+                                label='Student Average Scores' />
+                            <Heatmap
+                                data={data}
+                                score="math_score"
+                                height={innerheight / 4}
+                                width={innerwidth / 4}
+                                x={margin.left}
+                                y={innerheight / 4 + margin.gap + 20}
+                                label='Student Math Scores' />
+                            <Heatmap
+                                data={data}
+                                score="reading_score"
+                                height={innerheight / 4}
+                                width={innerwidth/ 4}
+                                x={margin.left + innerwidth / 4 + margin.gap + 100}
+                                y={margin.top}
+                                label='Student Reading Scores' />
+                            <Heatmap
+                                data={data}
+                                score="writing_score"
+                                height={innerheight / 4}
+                                width={innerwidth / 4}
+                                x={margin.left + innerwidth / 4 + margin.gap + 100}
+                                y={innerheight / 4 + margin.gap + 20}
+                                label='Student Writing Scores' />
+                            </g>    
+                        </svg>
+                    </div>
+                    </div>        
+                )
+            }
+            const rootElement = document.getElementById('root');
+           ReactDOM.render(<Charts />, rootElement);
+        </script>
+    </body>
+</html>
